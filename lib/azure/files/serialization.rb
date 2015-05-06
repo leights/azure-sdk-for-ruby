@@ -16,7 +16,7 @@ require 'azure/service/serialization'
 require 'azure/service/enumeration_results'
 
 require 'azure/files/share'
-require 'azure/files/blob'
+require 'azure/files/azure_files'
 require 'azure/files/block'
 
 require 'base64'
@@ -26,13 +26,13 @@ module Azure
     module Serialization
       include Azure::Service::Serialization
 
-      def self.container_enumeration_results_from_xml(xml)
+      def self.share_enumeration_results_from_xml(xml)
         xml = slopify(xml)
 
         expect_node("EnumerationResults", xml)
 
         results = enumeration_results_from_xml(xml, Azure::Service::EnumerationResults.new)
-        
+
         return results unless (xml > "Shares").any? && ((xml > "Shares") > "Share").any?
 
         if xml.Shares.Share.count == 0
@@ -52,20 +52,20 @@ module Azure
 
         Share.new do |share|
           share.name = xml.Name.text if (xml > "Name").any?
-          share.properties = container_properties_from_xml(xml.Properties) if (xml > "Properties").any?
+          share.properties = share_properties_from_xml(xml.Properties) if (xml > "Properties").any?
           share.metadata = metadata_from_xml(xml.Metadata) if (xml > "Metadata").any?
         end
       end
 
-      def self.container_from_headers(headers)
-        Container.new do |container|
-          container.properties = container_properties_from_headers(headers)
-          container.public_access_level = public_access_level_from_headers(headers)
-          container.metadata = metadata_from_headers(headers)
+      def self.share_from_headers(headers)
+        Share.new do |share|
+          share.properties = share_properties_from_headers(headers)
+          share.public_access_level = public_access_level_from_headers(headers)
+          share.metadata = metadata_from_headers(headers)
         end
       end
 
-      def self.container_properties_from_xml(xml)
+      def self.share_properties_from_xml(xml)
         xml = slopify(xml)
         expect_node("Properties", xml)
 
@@ -80,7 +80,7 @@ module Azure
         props
       end
 
-      def self.container_properties_from_headers(headers)
+      def self.share_properties_from_headers(headers)
         props = {}
 
         props[:last_modified] = headers["Last-Modified"] 
@@ -96,21 +96,21 @@ module Azure
         headers["x-ms-blob-public-access"]
       end
 
-      def self.blob_enumeration_results_from_xml(xml)
+      def self.files_enumeration_results_from_xml(xml)
       
         xml = slopify(xml)
         expect_node("EnumerationResults", xml)
 
         results = enumeration_results_from_xml(xml, Azure::Service::EnumerationResults.new)
 
-        return results unless (xml > "Blobs").any?
+        return results unless (xml > "Entries").any?
 
-        if ((xml > "Blobs") > "Blob").any?
-          if xml.Blobs.Blob.count == 0
-            results.push(blob_from_xml(xml.Blobs.Blob))
+        if ((xml > "Entries") > "File").any?
+          if xml.Entries.File.count == 0
+            results.push(file_from_xml(xml.Entries.File))
           else
-            xml.Blobs.Blob.each { |blob_node|
-              results.push(blob_from_xml(blob_node))
+            xml.Entries.File.each { |file_node|
+              results.push(file_from_xml(file_node))
             }
           end
         end
@@ -118,23 +118,23 @@ module Azure
         results
       end
       
-      def self.blob_from_xml(xml)
+      def self.file_from_xml(xml)
         xml = slopify(xml)
-        expect_node("Blob", xml)
+        expect_node("File", xml)
 
-        Blob.new do |blob|
-          blob.name = xml.Name.text if (xml > "Name").any?
-          blob.snapshot = xml.Snapshot.text if (xml > "Snapshot").any?
+        Files.new do |file|
+          file.name = xml.Name.text if (xml > "Name").any?
+          file.snapshot = xml.Snapshot.text if (xml > "Snapshot").any?
 
-          blob.properties = blob_properties_from_xml(xml.Properties) if (xml > "Properties").any?
-          blob.metadata = metadata_from_xml(xml.Metadata) if (xml > "Metadata").any?
+          file.properties = blob_properties_from_xml(xml.Properties) if (xml > "Properties").any?
+          file.metadata = metadata_from_xml(xml.Metadata) if (xml > "Metadata").any?
         end
       end
 
-      def self.blob_from_headers(headers)
-        Blob.new do |blob|
-          blob.properties = blob_properties_from_headers(headers)
-          blob.metadata = metadata_from_headers(headers)
+      def self.file_from_headers(headers)
+        Files.new do |file|
+          file.properties = file_properties_from_headers(headers)
+          file.metadata = metadata_from_headers(headers)
         end
       end
 
@@ -168,7 +168,7 @@ module Azure
         props
       end
 
-      def self.blob_properties_from_headers(headers)
+      def self.file_properties_from_headers(headers)
         props = {}
 
         props[:last_modified] = headers["Last-Modified"]
@@ -177,8 +177,8 @@ module Azure
         props[:lease_state] = headers["x-ms-lease-state"]
         props[:lease_duration] = headers["x-ms-lease-duration"]
 
-        props[:content_length] = headers["x-ms-blob-content-length"] || headers["Content-Length"]
-        props[:content_length] = props[:content_length].to_i if props[:content_length]
+        #props[:content_length] = headers["x-ms-blob-content-length"] || headers["Content-Length"]
+        #props[:content_length] = props[:content_length].to_i if props[:content_length]
       
         props[:content_type] =  headers["x-ms-blob-content-type"] || headers["Content-Type"]
         props[:content_encoding] = headers["x-ms-blob-content-encoding"] || headers["Content-Encoding"]

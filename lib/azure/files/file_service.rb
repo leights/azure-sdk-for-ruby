@@ -26,7 +26,7 @@ module Azure
         @host = Azure.config.storage_file_host
       end
 
-      # Public: Get a list of Containers from the server
+      # Public: Get a list of shares from the server
       #
       # ==== Attributes
       #
@@ -35,23 +35,23 @@ module Azure
       # ==== Options
       #
       # Accepted key/value pairs in options parameter are:
-      # * +:prefix+       - String. Filters the results to return only containers
+      # * +:prefix+       - String. Filters the results to return only shares
       #   whose name begins with the specified prefix. (optional)
       #
       # * +:marker+       - String. An identifier the specifies the portion of the
       #   list to be returned. This value comes from the property
       #   Azure::Service::EnumerationResults.continuation_token when there
-      #   are more containers available than were returned. The
+      #   are more shares available than were returned. The
       #   marker value may then be used here to request the next set
       #   of list items. (optional)
       #
-      # * +:max_results+  - Integer. Specifies the maximum number of containers to return.
+      # * +:max_results+  - Integer. Specifies the maximum number of shares to return.
       #   If max_results is not specified, or is a value greater than
       #   5,000, the server will return up to 5,000 items. If it is set
       #   to a value less than or equal to zero, the server will return
       #   status code 400 (Bad Request). (optional)
       #
-      # * +:metadata+     - Boolean. Specifies whether or not to return the container metadata.
+      # * +:metadata+     - Boolean. Specifies whether or not to return the share metadata.
       #   (optional, Default=false)
       #
       # * +:timeout+      - Integer. A timeout in seconds.
@@ -81,51 +81,49 @@ module Azure
         uri = shares_uri(query)
         response = call(:get, uri)
 
-        Serialization.container_enumeration_results_from_xml(response.body)
+        Serialization.share_enumeration_results_from_xml(response.body)
       end
 
-      # Public: Create a new container
+      # Public: Create a new share
       #
       # ==== Attributes
       #
-      # * +name+          - String. The name of the container
+      # * +name+          - String. The name of the share
       # * +options+       - Hash. Optional parameters.
       #
       # ==== Options
       #
       # Accepted key/value pairs in options parameter are:
-      # * +:metadata+            - Hash. User defined metadata for the container (optional)
-      # * +:public_access_level+ - String. One of "container" or "blob" (optional)
+      # * +:metadata+            - Hash. User defined metadata for the share (optional)
+      # * +:public_access_level+ - String. One of "share" or "blob" (optional)
       # * +:timeout+             - Integer. A timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179468.aspx
       #
-      # Returns a Container
-      def create_container(name, options={})
+      # Returns a share
+      def create_share(name, options={})
         query = { }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = container_uri(name, query)
+        uri = share_uri(name, query)
 
         headers = { }
 
         add_metadata_to_headers(options[:metadata], headers) if options[:metadata]
 
-        headers["x-ms-blob-public-access"] = options[:public_access_level].to_s if options[:public_access_level]
-
         response = call(:put, uri, nil, headers)
 
-        container = Serialization.container_from_headers(response.headers)
-        container.name = name
-        container.metadata = options[:metadata]
-        container
+        share = Serialization.share_from_headers(response.headers)
+        share.name = name
+        share.metadata = options[:metadata]
+        share
       end
 
-      # Public: Deletes a container
+      # Public: Deletes a share
       #
       # ==== Attributes
       #
-      # * +name+       - String. The name of the container
+      # * +name+       - String. The name of the share
       # * +options+    - Hash. Optional parameters.
       #
       # ==== Options
@@ -136,19 +134,19 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179408.aspx
       #
       # Returns nil on success
-      def delete_container(name, options={})
+      def delete_share(name, options={})
         query = { }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        call(:delete, container_uri(name, query))
+        call(:delete, share_uri(name, query))
         nil
       end
 
-      # Public: Returns all properties and metadata on the container.
+      # Public: Returns all properties and metadata on the share.
       #
       # ==== Attributes
       #
-      # * +name+       - String. The name of the container
+      # * +name+       - String. The name of the share
       # * +options+    - Hash. Optional parameters.
       #
       # ==== Options
@@ -158,23 +156,23 @@ module Azure
       #
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179370.aspx
       #
-      # Returns a Container
-      def get_container_properties(name, options={})
+      # Returns a share
+      def get_share_properties(name, options={})
         query = { }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        response = call(:get, container_uri(name, query))
+        response = call(:get, share_uri(name, query))
 
-        container = Serialization.container_from_headers(response.headers)
-        container.name = name
-        container
+        share = Serialization.share_from_headers(response.headers)
+        share.name = name
+        share
       end
 
-      # Public: Returns only user-defined metadata for the specified container.
+      # Public: Returns only user-defined metadata for the specified share.
       #
       # ==== Attributes
       #
-      # * +name+       - String. The name of the container
+      # * +name+       - String. The name of the share
       # * +options+    - Hash. Optional parameters.
       #
       # ==== Options
@@ -184,24 +182,24 @@ module Azure
       #
       # See http://msdn.microsoft.com/en-us/library/windowsazure/ee691976.aspx
       #
-      # Returns a Container
-      def get_container_metadata(name, options={})
+      # Returns a share
+      def get_share_metadata(name, options={})
         query = { "comp" => "metadata" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        response = call(:get, container_uri(name, query))
+        response = call(:get, share_uri(name, query))
 
-        container = Serialization.container_from_headers(response.headers)
-        container.name = name
-        container
+        share = Serialization.share_from_headers(response.headers)
+        share.name = name
+        share
       end
 
-      # Public: Gets the access control list (ACL) and any container-level access policies
-      # for the container.
+      # Public: Gets the access control list (ACL) and any share-level access policies
+      # for the share.
       #
       # ==== Attributes
       #
-      # * +name+       - String. The name of the container
+      # * +name+       - String. The name of the share
       # * +options+    - Hash. Optional parameters.
       #
       # ==== Options
@@ -211,30 +209,30 @@ module Azure
       #
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179469.aspx
       #
-      # Returns a tuple of (container, signed_identifiers)
-      #   container           - A Azure::Entity::Blob::Container instance
+      # Returns a tuple of (share, signed_identifiers)
+      #   share           - A Azure::Entity::Blob::share instance
       #   signed_identifiers  - A list of Azure::Entity::SignedIdentifier instances
       #
-      def get_container_acl(name, options={})
+      def get_share_acl(name, options={})
         query = { "comp" => "acl" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
-        response = call(:get, container_uri(name, query))
+        response = call(:get, share_uri(name, query))
 
-        container = Serialization.container_from_headers(response.headers)
-        container.name = name
+        share = Serialization.share_from_headers(response.headers)
+        share.name = name
 
         signed_identifiers = nil
         signed_identifiers = Serialization.signed_identifiers_from_xml(response.body) if response.body != nil && response.body.length > 0
 
-        return container, signed_identifiers
+        return share, signed_identifiers
       end
 
-      # Public: Sets the ACL and any container-level access policies for the container.
+      # Public: Sets the ACL and any share-level access policies for the share.
       #
       # ==== Attributes
       #
-      # * +name+                         - String. The name of the container
-      # * +public_access_level+          - String. The container public access level
+      # * +name+                         - String. The name of the share
+      # * +public_access_level+          - String. The share public access level
       # * +options+                      - Hash. Optional parameters.
       #
       # ==== Options
@@ -245,14 +243,14 @@ module Azure
       #
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179391.aspx
       #
-      # Returns a tuple of (container, signed_identifiers)
-      # * +container+           - A Azure::Entity::Blob::Container instance
+      # Returns a tuple of (share, signed_identifiers)
+      # * +share+           - A Azure::Entity::Blob::share instance
       # * +signed_identifiers+  - A list of Azure::Entity::SignedIdentifier instances
       #
-      def set_container_acl(name, public_access_level, options={})
+      def set_share_acl(name, public_access_level, options={})
         query = { "comp" => "acl" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
-        uri =container_uri(name, query)
+        uri =share_uri(name, query)
 
         headers = { }
         headers["x-ms-blob-public-access"] = public_access_level if public_access_level && public_access_level.to_s.length > 0
@@ -261,23 +259,23 @@ module Azure
         signed_identifiers = options[:signed_identifiers] if options[:signed_identifiers]
 
         body = nil
-        body = Serialization.signed_identifiers_to_xml(signed_identifiers) if signed_identifiers && headers["x-ms-blob-public-access"] == "container"
+        body = Serialization.signed_identifiers_to_xml(signed_identifiers) if signed_identifiers && headers["x-ms-blob-public-access"] == "share"
 
         response = call(:put, uri, body, headers)
 
-        container = Serialization.container_from_headers(response.headers)
-        container.name = name
-        container.public_access_level = public_access_level
+        share = Serialization.share_from_headers(response.headers)
+        share.name = name
+        share.public_access_level = public_access_level
 
-        return container, signed_identifiers || []
+        return share, signed_identifiers || []
 
       end
 
-      # Public: Sets custom metadata for the container.
+      # Public: Sets custom metadata for the share.
       #
       # ==== Attributes
       #
-      # * +name+      - String. The name of the container
+      # * +name+      - String. The name of the share
       # * +metadata+  - Hash. A Hash of the metadata values
       # * +options+   - Hash. Optional parameters.
       #
@@ -289,14 +287,14 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179362.aspx
       #
       # Returns nil on success
-      def set_container_metadata(name, metadata, options={})
+      def set_share_metadata(name, metadata, options={})
         query = { "comp" => "metadata" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
         headers = { }
         add_metadata_to_headers(metadata, headers) if metadata
 
-        call(:put, container_uri(name, query), nil, headers)
+        call(:put, share_uri(name, query), nil, headers)
         nil
       end
 
@@ -304,7 +302,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +name+              - String. The name of the container to list blobs for.
+      # * +name+              - String. The name of the share to list blobs for.
       # * +options+           - Hash. Optional parameters.
       #
       # ==== Options
@@ -353,7 +351,7 @@ module Azure
       # Array (vs a String if it only contains a single value).
       #
       # Returns an Azure::Service::EnumerationResults
-      def list_blobs(name, options={})
+      def list_files(name, options={})
         query = { "comp" => "list" }
         query["prefix"] = options[:prefix].gsub(/\\/, "/") if options[:prefix]
         query["delimiter"] = options[:delimiter] if options[:delimiter]
@@ -369,10 +367,10 @@ module Azure
 
         query["include"] = included_datasets.join ',' if included_datasets.length > 0
 
-        uri = container_uri(name, query)
+        uri = directory_uri(name, query)
         response = call(:get, uri)
 
-        Serialization.blob_enumeration_results_from_xml(response.body)
+        Serialization.files_enumeration_results_from_xml(response.body)
       end
 
       # Public: Creates a new page blob. Note that calling create_page_blob to create a page
@@ -380,7 +378,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+ - String. The container name.
+      # * +share+ - String. The share name.
       # * +blob+      - String. The blob name.
       # * +length+    - Integer. Specifies the maximum size for the page blob, up to 1 TB. The page blob size must be aligned to a 512-byte boundary.
       # * +options+   - Hash. Optional parameters.
@@ -405,11 +403,11 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179451.aspx
       #
       # Returns a Blob
-      def create_page_blob(container, blob, length, options={})
+      def create_page_blob(share, blob, length, options={})
         query = { }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
 
@@ -451,7 +449,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+    - String. Name of container
+      # * +share+    - String. Name of share
       # * +blob+         - String. Name of blob
       # * +start_range+  - Integer. Position of first byte of first page
       # * +end_range+    - Integer. Position of last byte of of last page
@@ -473,14 +471,14 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/ee691975.aspx
       #
       # Returns Blob
-      def create_blob_pages(container, blob, start_range, end_range, content, options={})
-        query = { "comp" => "page" }
+      def create_file_range(share, file, start_range, end_range, content, options={})
+        query = { "comp" => "range" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = file_uri(share, file, query)
         headers = { }
         headers["x-ms-range"] = "bytes=#{start_range}-#{end_range}"
-        headers["x-ms-page-write"] = "update"
+        headers["x-ms-write"] = "update"
 
         # clear default content type
         headers["Content-Type"] = ""
@@ -508,7 +506,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+    - String. Name of container.
+      # * +share+    - String. Name of share.
       # * +blob+         - String. Name of blob.
       # * +start_range+  - Integer. Position of first byte of first page.
       # * +end_range+    - Integer. Position of last byte of of last page.
@@ -522,11 +520,11 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/ee691975.aspx
       #
       # Returns Blob
-      def clear_blob_pages(container, blob, start_range, end_range, options={})
+      def clear_blob_pages(share, blob, start_range, end_range, options={})
         query = { "comp" => "page" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
         headers["x-ms-range"] = "bytes=#{start_range}-#{end_range}"
@@ -555,7 +553,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+   - String. The container name.
+      # * +share+   - String. The share name.
       # * +blob+        - String. The blob name.
       # * +content+     - IO or String. The content of the blob.
       # * +options+      - Hash. Optional parameters.
@@ -579,16 +577,18 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179451.aspx
       #
       # Returns a Blob
-      def create_block_blob(container, blob, content, options={})
+      def create_file(share, file, options={})
         query = { }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = file_uri(share, file, query)
 
         headers = { }
 
         # set x-ms-blob-type to BlockBlob
-        headers["x-ms-blob-type"] = "BlockBlob"
+        headers["x-ms-type"] = "file"
+        headers["x-ms-content-length"] = "#{0}"
+        headers["Content-Length"] = "#{0}"
 
         # set the rest of the optional headers
         headers["Content-Type"] = options[:content_type] || "application/octet-stream"
@@ -606,10 +606,10 @@ module Azure
         add_metadata_to_headers(options[:metadata], headers) if options[:metadata]
 
         # call PutBlob with empty body
-        response = call(:put, uri, content, headers)
+        response = call(:put, uri, nil, headers)
 
-        result = Serialization.blob_from_headers(response.headers)
-        result.name = blob
+        result = Serialization.file_from_headers(response.headers)
+        result.name = file
 
         result
       end
@@ -618,7 +618,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+   - String. The container name.
+      # * +share+   - String. The share name.
       # * +blob+        - String. The blob name.
       # * +block_id+    - String. The block id. Note: this should be the raw block id, not Base64 encoded.
       # * +content+     - IO or String. The content of the blob.
@@ -633,12 +633,12 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd135726.aspx
       #
       # Returns the MD5 of the uploaded block (as calculated by the server)
-      def create_blob_block(container, blob, block_id, content, options={})
+      def create_blob_block(share, blob, block_id, content, options={})
         query = { "comp" => "block" }
         query["blockid"] = Base64.strict_encode64(block_id)
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
         headers["Content-MD5"] = options[:content_md5] if options[:content_md5]
@@ -662,7 +662,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+   - String. The container name.
+      # * +share+   - String. The share name.
       # * +blob+        - String. The blob name.
       # * +block_list+  - Array. A ordered list of lists in the following format:
       #   [ ["block_id1", :committed], ["block_id2", :uncommitted], ["block_id3"], ["block_id4", :committed]... ]
@@ -686,11 +686,11 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179467.aspx
       #
       # Returns nil on success
-      def commit_blob_blocks(container, blob, block_list, options={})
+      def commit_blob_blocks(share, blob, block_list, options={})
         query = { "comp" => "blocklist" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
         unless options.empty?
@@ -721,7 +721,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+       - String. The container name.
+      # * +share+       - String. The share name.
       # * +blob+            - String. The blob name.
       # * +options+         - Hash. Optional parameters.
       #
@@ -736,7 +736,7 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179400.aspx
       #
       # Returns a list of Azure::Entity::Blob::Block instances
-      def list_blob_blocks(container, blob, options={})
+      def list_blob_blocks(share, blob, options={})
 
         options[:blocklist_type] = options[:blocklist_type] || :all
 
@@ -745,7 +745,7 @@ module Azure
         query["blocklisttype"] = options[:blocklist_type].to_s if options[:blocklist_type]
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         response = call(:get, uri)
 
@@ -756,7 +756,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+      - String. The container name.
+      # * +share+      - String. The share name.
       # * +blob+           - String. The blob name.
       # * +options+        - Hash. Optional parameters.
       #
@@ -770,12 +770,12 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179394.aspx
       #
       # Returns a Blob
-      def get_blob_properties(container, blob, options={})
+      def get_blob_properties(share, blob, options={})
         query = { }
         query["snapshot"] = options[:snapshot] if options[:snapshot]
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         response = call(:head, uri)
 
@@ -791,7 +791,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+      - String. The container name.
+      # * +share+      - String. The share name.
       # * +blob+           - String. The blob name.
       # * +options+        - Hash. Optional parameters.
       #
@@ -805,12 +805,12 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179350.aspx
       #
       # Returns a Blob
-      def get_blob_metadata(container, blob, options={})
+      def get_blob_metadata(share, blob, options={})
         query = {"comp"=>"metadata"}
         query["snapshot"] = options[:snapshot] if options[:snapshot]
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         response = call(:get, uri)
 
@@ -827,7 +827,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+       - String. The container name.
+      # * +share+       - String. The share name.
       # * +blob+            - String. The blob name.
       # * +options+         - Hash. Optional parameters.
       #
@@ -846,12 +846,12 @@ module Azure
       #
       #   eg. [ [0, 511], [512, 1024], ... ]
       #
-      def list_page_blob_ranges(container, blob, options={})
+      def list_page_blob_ranges(share, blob, options={})
         query = {"comp"=>"pagelist"}
         query.update({"snapshot" => options[:snapshot]}) if options[:snapshot]
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         options[:start_range] = 0 if options[:end_range] and not options[:start_range]
 
@@ -868,7 +868,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+      - String. The container name.
+      # * +share+      - String. The share name.
       # * +blob+           - String. The blob name.
       # * +options+         - Hash. Optional parameters.
       #
@@ -941,10 +941,10 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/ee691966.aspx
       #
       # Returns nil on success.
-      def set_blob_properties(container, blob, options={})
+      def set_blob_properties(share, blob, options={})
         query = { "comp" => "properties" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
 
@@ -967,7 +967,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+      - String. The container name.
+      # * +share+      - String. The share name.
       # * +blob+           - String. The blob name.
       # * +metadata+       - Hash. The custom metadata.
       # * +options+        - Hash. Optional parameters.
@@ -980,10 +980,10 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179414.aspx
       #
       # Returns nil on success.
-      def set_blob_metadata(container, blob, metadata, options={})
+      def set_blob_metadata(share, blob, metadata, options={})
         query = { "comp" => "metadata" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
 
@@ -997,7 +997,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+        - String. The container name.
+      # * +share+        - String. The share name.
       # * +blob+             - String. The blob name.
       # * +options+          - Hash. Optional parameters.
       #
@@ -1015,11 +1015,11 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179440.aspx
       #
       # Returns a blob and the blob body
-      def get_blob(container, blob, options={})
+      def get_file(share, file, options={})
         query = { }
         query["snapshot"] = options[:snapshot] if options[:snapshot]
         query["timeout"] = options[:timeout].to_s if options[:timeout]
-        uri = blob_uri(container, blob, query)
+        uri = file_uri(share, file, query)
 
         headers = { }
         options[:start_range] = 0 if options[:end_range] and not options[:start_range]
@@ -1029,8 +1029,8 @@ module Azure
         end
 
         response = call(:get, uri, nil, headers)
-        result = Serialization.blob_from_headers(response.headers)
-        result.name = blob if not result.name
+        result = Serialization.file_from_headers(response.headers)
+        result.name = file if not result.name
         return result, response.body
       end
 
@@ -1038,7 +1038,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+          - String. The container name.
+      # * +share+          - String. The share name.
       # * +blob+               - String. The blob name.
       # * +options+            - Hash. Optional parameters.
       #
@@ -1059,12 +1059,12 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/dd179440.aspx
       #
       # Returns nil on success
-      def delete_blob(container, blob, options={})
+      def delete_blob(share, blob, options={})
         query = { }
         query["snapshot"] = options[:snapshot] if options[:snapshot]
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         options[:delete_snapshots] = :include if !options[:delete_snapshots]
 
@@ -1079,7 +1079,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+       - String. The container name.
+      # * +share+       - String. The share name.
       # * +blob+            - String. The blob name.
       # * +options+         - Hash. Optional parameters.
       #
@@ -1104,11 +1104,11 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/ee691971.aspx
       #
       # Returns the snapshot DateTime value
-      def create_blob_snapshot(container, blob, options={})
+      def create_blob_snapshot(share, blob, options={})
         query = { "comp" => "snapshot" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
         unless options.empty?
@@ -1129,9 +1129,9 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +source_container+      - String. The destination container name to copy to.
+      # * +source_share+      - String. The destination share name to copy to.
       # * +source_blob+           - String. The destination blob name to copy to.
-      # * +destination_container+ - String. The source container name to copy from.
+      # * +destination_share+ - String. The source share name to copy from.
       # * +destination_blob+      - String. The source blob name to copy from.
       # * +options+               - Hash. Optional parameters.
       #
@@ -1179,13 +1179,13 @@ module Azure
       #   "success" - The copy completed successfully.
       #   "pending" - The copy is in progress.
       #
-      def copy_blob(destination_container, destination_blob, source_container, source_blob, options={})
+      def copy_blob(destination_share, destination_blob, source_share, source_blob, options={})
         query = { }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(destination_container, destination_blob, query)
+        uri = blob_uri(destination_share, destination_blob, query)
         headers = { }
-        headers["x-ms-copy-source"] = blob_uri(source_container, source_blob, options[:source_snapshot] ? { "snapshot" => options[:source_snapshot] } : {}).to_s
+        headers["x-ms-copy-source"] = blob_uri(source_share, source_blob, options[:source_snapshot] ? { "snapshot" => options[:source_snapshot] } : {}).to_s
 
         unless options.empty?
           headers["If-Modified-Since"] = options[:dest_if_modified_since] if options[:dest_if_modified_since]
@@ -1209,7 +1209,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+          - String. The container name.
+      # * +share+          - String. The share name.
       # * +blob+               - String. The blob name.
       # * +options+            - Hash. Optional parameters.
       #
@@ -1228,11 +1228,11 @@ module Azure
       # to write to the blob, or to renew, change, or release the lease. A successful renew operation also returns the lease id
       # for the active lease.
       #
-      def acquire_lease(container, blob, options={})
+      def acquire_lease(share, blob, options={})
         query = { "comp" => "lease" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         duration = -1
         duration = options[:duration] if options[:duration]
@@ -1253,7 +1253,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+         - String. The container name.
+      # * +share+         - String. The share name.
       # * +blob+              - String. The blob name.
       # * +lease+             - String. The lease id
       # * +options+           - Hash. Optional parameters.
@@ -1266,11 +1266,11 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/ee691972.aspx
       #
       # Returns the renewed lease id
-      def renew_lease(container, blob, lease, options={})
+      def renew_lease(share, blob, lease, options={})
         query = { "comp" => "lease" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
         headers["x-ms-lease-action"] = "renew"
@@ -1286,7 +1286,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+         - String. The container name.
+      # * +share+         - String. The share name.
       # * +blob+              - String. The blob name.
       # * +lease+             - String. The lease id.
       # * +options+           - Hash. Optional parameters.
@@ -1299,11 +1299,11 @@ module Azure
       # See http://msdn.microsoft.com/en-us/library/windowsazure/ee691972.aspx
       #
       # Returns nil on success
-      def release_lease(container, blob, lease, options={})
+      def release_lease(share, blob, lease, options={})
         query = { "comp" => "lease" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
         headers["x-ms-lease-action"] = "release"
@@ -1324,7 +1324,7 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container+         - String. The container name.
+      # * +share+         - String. The share name.
       # * +blob+              - String. The blob name.
       # * +options+           - Hash. Optional parameters.
       #
@@ -1346,11 +1346,11 @@ module Azure
       # Returns an Integer of the remaining lease time. This value is the approximate time remaining in the lease
       # period, in seconds. This header is returned only for a successful request to break the lease. If the break
       # is immediate, 0 is returned.
-      def break_lease(container, blob, options={})
+      def break_lease(share, blob, options={})
         query = { "comp" => "lease" }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
 
-        uri = blob_uri(container, blob, query)
+        uri = blob_uri(share, blob, query)
 
         headers = { }
         headers["x-ms-lease-action"] = "break"
@@ -1360,7 +1360,7 @@ module Azure
         response.headers["x-ms-lease-time"].to_i
       end
 
-      # Protected: Generate the URI for the collection of containers.
+      # Protected: Generate the URI for the collection of shares.
       #
       # ==== Attributes
       #
@@ -1374,19 +1374,26 @@ module Azure
         generate_uri("/", query)
       end
 
-      # Protected: Generate the URI for a specific container.
+      # Protected: Generate the URI for a specific share.
       #
       # ==== Attributes
       #
-      # * +name+  - The container name. If this is a URI, we just return this.
+      # * +name+  - The share name. If this is a URI, we just return this.
       # * +query+ - A Hash of key => value query parameters.
       # * +host+  - The host of the API.
       #
       # Returns a URI.
       protected
-      def container_uri(name, query={})
+      def share_uri(name, query={})
         return name if name.kind_of? ::URI
-        query = { "restype" => "container" }.merge(query)
+        query = { "restype" => "share" }.merge(query)
+        generate_uri(name, query)
+      end
+
+      protected
+      def directory_uri(name, query={})
+        return name if name.kind_of? ::URI
+        query = { "restype" => "directory" }.merge(query)
         generate_uri(name, query)
       end
 
@@ -1394,18 +1401,18 @@ module Azure
       #
       # ==== Attributes
       #
-      # * +container_name+ - String representing the name of the container.
+      # * +share_name+ - String representing the name of the share.
       # * +blob_name+      - String representing the name of the blob.
       # * +query+          - A Hash of key => value query parameters.
       # * +host+           - The host of the API.
       #
       # Returns a URI.
       protected
-      def blob_uri(container_name, blob_name, query={})
-        if container_name.nil? || container_name.empty?
+      def file_uri(share_name, blob_name, query={})
+        if share_name.nil? || share_name.empty?
           path = blob_name
         else
-          path = File.join(container_name, blob_name)
+          path = File.join(share_name, blob_name)
         end
 
         path = CGI.escape(path.encode('UTF-8'))

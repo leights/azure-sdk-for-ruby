@@ -16,6 +16,7 @@ module Azure; end
 
 require 'azure/core'
 require 'azure/blob/blob_service'
+require 'azure/files/file_service'
 require 'azure/queue/queue_service'
 require 'azure/service_bus/service_bus_service'
 require 'azure/service_bus/empty_rule_action'
@@ -40,6 +41,7 @@ require 'azure/virtual_network_management/virtual_network_management_service'
 
 # add some aliases for convenience
 Azure::BlobService = Azure::Blob::BlobService
+Azure::FileService = Azure::Files::FileService
 Azure::QueueService = Azure::Queue::QueueService
 Azure::TableService = Azure::Table::TableService
 Azure::ServiceBusService = Azure::ServiceBus::ServiceBusService

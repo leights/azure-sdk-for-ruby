@@ -110,12 +110,16 @@ module Azure
       #
       #   config.storage_blob_host = "http://127.0.0.1:10000/devstoreaccount1"
       attr_writer :storage_blob_host
+      attr_writer :storage_file_host
 
       # Public: Get the host for this service. If you set something using #storage_blob_host=,
       # then we use that. Else we default to Azure's default hosts, based
       # on your account name.
       def storage_blob_host
         @storage_blob_host || default_host(:blob)
+      end
+      def storage_file_host
+        @storage_file_host || default_host(:file)
       end
 
       # Public: Set the host for the Queue service. Only set this if you want

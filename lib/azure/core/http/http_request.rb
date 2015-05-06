@@ -146,8 +146,9 @@ module Azure
             http.use_ssl = true
             http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           end
+          req = http.request(request)
 
-          response = HttpResponse.new(http.request(request))
+          response = HttpResponse.new(req)
           response.uri = uri
           raise response.error unless response.success?
           response
